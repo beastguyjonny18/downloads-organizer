@@ -81,8 +81,6 @@ inotifywait -m "$DOWNLOADS" -e close_write -e moved_to |
                 move_file "$FILEPATH" "$PICTURES" ;;
             *.pdf|*.html|*.txt|*.docx|*.xlsx)
                 move_file "$FILEPATH" "$DOCS" ;;
-            *.jar)
-                move_file "$FILEPATH" "$MINECRAFT_PLUGINS" ;;
             *)
                 # Create extension folder in Downloads
                 TARGET_DIR="$DOWNLOADS/$EXT_FOLDER"
