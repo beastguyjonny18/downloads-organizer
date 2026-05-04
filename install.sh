@@ -9,17 +9,16 @@ mkdir -p "$SCRIPTS_DIR"
 mkdir -p "$SERVICE_DIR"
 
 echo "Installing organizer script..."
-cp organizer.sh "$SCRIPTS_DIR/downloads_watcher.sh"
-chmod +x "$SCRIPTS_DIR/downloads_watcher.sh"
+cp organizer.sh "$SCRIPTS_DIR/downloads_organizer.sh"
+chmod +x "$SCRIPTS_DIR/downloads_organizer.sh"
 
-echo "Setting up systemd service..."
-# Update the template with the actual home directory
+echo "Setting up systemd service and timer..."
 sed "s|\$HOME|$HOME|g" downloads-organizer.service.template > "$SERVICE_DIR/downloads-organizer.service"
+sed "s|\$HOME|$HOME|g" downloads-organizer.timer.template > "$SERVICE_DIR/downloads-organizer.timer"
 
-echo "Reloading systemd and starting service..."
+echo "Reloading systemd and starting timer..."
 systemctl --user daemon-reload
-systemctl --user enable downloads-organizer.service
-systemctl --user restart downloads-organizer.service
+systemctl --user enable --now downloads-organizer.timer
 
 echo "Installation complete!"
-echo "You can view logs at: ~/.downloads_organizer.log"
+echo "The script will run every hour. Logs at: ~/.downloads_organizer.log"

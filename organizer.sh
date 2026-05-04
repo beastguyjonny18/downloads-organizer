@@ -6,11 +6,10 @@ MUSIC="$HOME/Music"
 VIDEOS="$HOME/Videos"
 PICTURES="$HOME/Pictures"
 DOCS="$HOME/Documents"
-MINECRAFT_PLUGINS="$HOME/Documents/Minecraft_Server/plugins"
 LOG_FILE="$HOME/.downloads_organizer.log"
 
 # --- PREPARATION ---
-mkdir -p "$DOWNLOADS" "$MUSIC" "$VIDEOS" "$PICTURES" "$DOCS" "$MINECRAFT_PLUGINS"
+mkdir -p "$DOWNLOADS" "$MUSIC" "$VIDEOS" "$PICTURES" "$DOCS"
 touch "$LOG_FILE"
 
 log_message() {
@@ -38,60 +37,46 @@ move_file() {
     fi
 }
 
-# --- MONITORING ---
-log_message "Service Started: Watching $DOWNLOADS"
+log_message "Hourly Cleanup Started"
 
-# Monitor for finished writes and moved files
-inotifywait -m "$DOWNLOADS" -e close_write -e moved_to |
-    while read -r directory events filename; do
-        # Skip hidden/temp files
-        if [[ "$filename" == .* ]] || [[ "$filename" == *.part ]] || [[ "$filename" == *.crdownload ]] || [[ "$filename" == *.tmp ]]; then
-            continue
-        fi
+# Find files in Downloads root (maxdepth 1, not directories)
+find "$DOWNLOADS" -maxdepth 1 -type f | while read -r FILEPATH; do
+    filename=$(basename "$FILEPATH")
 
-        FILEPATH="$DOWNLOADS/$filename"
-        
-        # Check if file still exists (might have been moved/deleted already)
-        [ ! -f "$FILEPATH" ] && continue
+    # Skip hidden/temp files
+    if [[ "$filename" == .* ]] || [[ "$filename" == *.part ]] || [[ "$filename" == *.crdownload ]] || [[ "$filename" == *.tmp ]]; then
+        continue
+    fi
 
-        # --- BUG FIX: Wait until file is no longer being written to ---
-        # We wait until 'fuser' returns non-zero (meaning no process has the file open)
-        MAX_RETRIES=30
-        RETRY_COUNT=0
-        while fuser "$FILEPATH" >/dev/null 2>&1; do
-            if [ $RETRY_COUNT -eq $MAX_RETRIES ]; then
-                log_message "TIMEOUT: $filename is still busy, skipping for now."
-                continue 2
-            fi
-            sleep 2
-            ((RETRY_COUNT++))
-        done
+    # Check if file is busy (browser still writing)
+    if fuser "$FILEPATH" >/dev/null 2>&1; then
+        log_message "SKIPPING: $filename is currently in use."
+        continue
+    fi
 
-        # Get extension info
-        EXT="${filename##*.}"
-        if [[ "$filename" == "$EXT" ]]; then EXT="MISC"; fi
-        EXT_FOLDER="${EXT^^}"
+    # Get extension info
+    EXT="${filename##*.}"
+    if [[ "$filename" == "$EXT" ]]; then EXT="MISC"; fi
+    EXT_FOLDER="${EXT^^}"
 
-        case "${filename,,}" in
-            *.mp3|*.wav|*.flac)
-                move_file "$FILEPATH" "$MUSIC" ;;
-            *.mp4|*.mkv|*.mov|*.avi)
-                move_file "$FILEPATH" "$VIDEOS" ;;
-            *.png|*.jpg|*.jpeg|*.gif|*.webp)
-                move_file "$FILEPATH" "$PICTURES" ;;
-            *.pdf|*.html|*.txt|*.docx|*.xlsx)
-                move_file "$FILEPATH" "$DOCS" ;;
-            *)
-                # Create extension folder in Downloads
-                TARGET_DIR="$DOWNLOADS/$EXT_FOLDER"
-                mkdir -p "$TARGET_DIR"
-                move_file "$FILEPATH" "$TARGET_DIR"
-                
-                # BUG FIX: Cleanup empty folders in Downloads every 10 moves
-                ((CLEANUP_COUNTER++))
-                if [ $((CLEANUP_COUNTER % 10)) -eq 0 ]; then
-                    find "$DOWNLOADS" -maxdepth 1 -type d -empty -delete
-                fi
-                ;;
-        esac
-    done
+    case "${filename,,}" in
+        *.mp3|*.wav|*.flac)
+            move_file "$FILEPATH" "$MUSIC" ;;
+        *.mp4|*.mkv|*.mov|*.avi)
+            move_file "$FILEPATH" "$VIDEOS" ;;
+        *.png|*.jpg|*.jpeg|*.gif|*.webp)
+            move_file "$FILEPATH" "$PICTURES" ;;
+        *.pdf|*.html|*.txt|*.docx|*.xlsx)
+            move_file "$FILEPATH" "$DOCS" ;;
+        *)
+            # Create extension folder in Downloads
+            TARGET_DIR="$DOWNLOADS/$EXT_FOLDER"
+            mkdir -p "$TARGET_DIR"
+            move_file "$FILEPATH" "$TARGET_DIR" ;;
+    esac
+done
+
+# Cleanup empty folders in Downloads
+find "$DOWNLOADS" -maxdepth 1 -type d -empty -delete
+
+log_message "Hourly Cleanup Finished"

@@ -1,17 +1,15 @@
 # Downloads Organizer
 
-An instant, automated file organizer for Linux that uses `inotify` to monitor your Downloads folder and sort files into appropriate categories as soon as they finish downloading.
+An automated file organizer for Linux that runs every hour to monitor your Downloads folder and sort files into appropriate categories.
 
 ## Features
-- **Instant Sorting:** Moves files the moment they are written to disk.
-- **Smart Detection:** Waits for downloads to fully finish (using `fuser`) before moving.
+- **Hourly Sorting:** Runs automatically every hour via a systemd timer.
+- **Smart Detection:** Skips files that are currently in use (using `fuser`).
 - **Conflict Resolution:** Prevents overwriting by appending timestamps to duplicate filenames.
 - **Dynamic Categories:** Automatically creates folders for unknown file types (e.g., `.zip` goes to `ZIP/`).
 - **Standard Integration:** Moves common media and documents to standard XDG folders (`Music`, `Videos`, etc.).
-- **Minecraft Support:** Built-in sorting for `.jar` plugins to a server directory.
 
 ## Requirements
-- `inotify-tools`: To monitor file system events.
 - `psmisc`: For `fuser` support.
 - `systemd`: For running as a background service.
 
@@ -30,8 +28,8 @@ An instant, automated file organizer for Linux that uses `inotify` to monitor yo
    ```
 
 ## Usage
-The script runs in the background. You can check its status or logs:
+The script runs every hour. You can check the timer status or logs:
 ```bash
-systemctl --user status downloads-organizer
+systemctl --user list-timers downloads-organizer.timer
 tail -f ~/.downloads_organizer.log
 ```
