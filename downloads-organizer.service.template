@@ -1,0 +1,11 @@
+[Unit]
+Description=Instant Downloads Folder Organizer
+After=network.target
+
+[Service]
+ExecStart=/home/c7/.scripts/downloads_watcher.sh
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=default.target
